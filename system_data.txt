@@ -1,0 +1,18 @@
+300             ! Lz2
+2               ! Z_empty
+1D-2            ! sigmag
+0.8333D0        ! Beta: 1/kT, T=298K
+-1              ! qq: charge of PE
+3               ! qqi: charge of salt ion
+1               ! ion_ratio
+2               ! arm: number of arm in star brushes
+50              ! Nma: number of monomers of each arm
+36              ! Nga: grafting number of star brushes
+3               ! man_s: Manning effect : every 'man' particle have one charge
+200000            ! StepNum0
+200000          ! StepNum:  steps of running
+20              ! DeltaStep: interval of pH move
+100             ! DeltaStep1: height
+100             ! DeltaStep2: histogram
+100             ! DeltaStep3: write data
+5               ! pH-pKa
