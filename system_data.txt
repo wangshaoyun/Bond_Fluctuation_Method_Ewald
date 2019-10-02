@@ -9,7 +9,7 @@
 50              ! Nma: number of monomers of each arm
 36              ! Nga: grafting number of star brushes
 3               ! man_s: Manning effect : every 'man' particle have one charge
-200000            ! StepNum0
+200000          ! StepNum0
 200000          ! StepNum:  steps of running
 20              ! DeltaStep: interval of pH move
 100             ! DeltaStep1: height

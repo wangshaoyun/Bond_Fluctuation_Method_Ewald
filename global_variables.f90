@@ -38,6 +38,7 @@ save
   real*8  :: pH_pKa   !pH - pKa
   integer :: accept   !accepted move
   real*8  :: accept_ratio 
+  real*8  :: rmse
 !##########################################################!
 
 !##################running and Histogram###################!

@@ -261,7 +261,7 @@ subroutine Periodic_array
 end subroutine Periodic_array
 
 
-subroutine total_energy_ewald(EE, rt, ft)
+subroutine total_energy_ewald(EE)
   !--------------------------------------!
   !
   !   
@@ -277,17 +277,14 @@ subroutine total_energy_ewald(EE, rt, ft)
   use global_variables
   implicit none
   real*8, intent(out) :: EE
-  real*8, intent(out) :: rt
-  real*8, intent(out) :: ft
   integer :: i, j, k, l, m, n, x1, y1, z1, x, y, z, t
   integer :: icelx, icely, icelz, ncel
-  real*8 :: st, fn, EE1, EE2,rr(4),q_total,Ec
+  real*8 :: EE1, EE2,rr(4),q_total,Ec
 
   EE = 0
   Ec = 0
   !
   !real space
-  call cpu_time(st)
   do i = 1, Nq
     m = charge(i)
     EE1 = 0
@@ -324,8 +321,6 @@ subroutine total_energy_ewald(EE, rt, ft)
     !self corrected term
     Ec = Ec - sqrt(alpha2/pi) * pos(m,4) * pos(m,4)
   end do
-  call cpu_time(fn)
-  rt = fn - st
   !
   !fourier space
   EE = EE + Ec/Beta*lb + sum( exp_ksqr * real( conjg(rho_k) * rho_k ) )/2.D0 
@@ -1174,14 +1169,69 @@ subroutine error_analysis_ewald(EE1)
   !--------------------------------------!
   use global_variables
   implicit none
-  real*8 :: e_r, e_k, q_tot, rmse, tol1, sumf1, sumf2, tm1, tm2
-  real*8 :: EE0, EE2
+  real*8 :: EE0,tol1
   real*8, intent(out) :: EE1
-  integer i,j,m
 
-!   tol = 5                
+  tol1 = tol
+  tol = 5                
+  !
+  !Initialize ewald parameters and array allocate.
+  call Initialize_ewald_parameters
+  !
+  !Construct the array totk_vectk(K_total,3), and allocate
+  !rho_k(K_total), delta_rhok(K_total).
+  call build_totk_vectk
+  !
+  !Construct the coefficients vector in Fourier space
+  call build_exp_ksqr
+  !
+  !
+  call pre_calculate_real_space
+  !
+  !Initialize cell list of charge
+  call Initialize_cell_list_q_Ewald
+  !
+  !Initialize real cell list
+  call Initialize_real_cell_list_Ewald
+  !
+  !Construct the structure factor rho_k
+  call build_rho_k
+  !
+  !
+  call total_energy_ewald(EE0)
+  call write_energy_parameters_Ewald
 
-  call total_energy_ewald(EE1,tm1,tm2)
+  tol=tol1
+  !
+  !Initialize ewald parameters and array allocate.
+  call Initialize_ewald_parameters
+  !
+  !Construct the array totk_vectk(K_total,3), and allocate
+  !rho_k(K_total), delta_rhok(K_total).
+  call build_totk_vectk
+  !
+  !Construct the coefficients vector in Fourier space
+  call build_exp_ksqr
+  !
+  !
+  call pre_calculate_real_space
+  !
+  !Initialize cell list of charge
+  call Initialize_cell_list_q_Ewald
+  !
+  !Initialize real cell list
+  call Initialize_real_cell_list_Ewald
+  !
+  !Construct the structure factor rho_k
+  call build_rho_k
+  !
+  !
+  call total_energy_ewald(EE1)
+  call write_energy_parameters_Ewald
+
+  rmse = abs(EE1-EE0)/EE0
+
+  write(*,*) EE0,EE1,rmse
 
 end subroutine error_analysis_ewald
 
@@ -1240,22 +1290,27 @@ subroutine Initialize_ewald_parameters
 
   !
   ! alpha and rcc
-!   alpha    = ( tau_rf * pi**3 * Nq / (Lx*Ly)**2/Lz/Z_empty ) ** (1.D0/6)
-!   alpha2   = alpha * alpha
-!   rcc  = tol / alpha * 2
-!   rcc2 = rcc * rcc
-
-  alpha = pi/4/tol
-  alpha2 = alpha*alpha
-  rcc = 1.D0*floor(32*tol*tol/pi)       ! 2*2.5*2.5/pi*2=7.96, lattice unit
-  rcc2 = rcc*rcc                         ! rcc is dependent on tol only.
-
-  !
-  !use verlet list in real space
-  Kmax1 = ceiling(tol*Lx*alpha/pi)*4
-  Kmax2 = ceiling(tol*Ly*alpha/pi)*4
-  Kmax3 = ceiling(tol*Lz*Z_empty*alpha/pi)*4
-write(*,*) Kmax1,Kmax2,Kmax3
+  alpha    = ( tau_rf * pi**3 * Nq / (Lx*Ly*Lz*Z_empty)**2 ) ** (1.D0/6)
+  alpha2   = alpha * alpha
+  rcc  = tol / alpha * 2
+  rcc2 = rcc * rcc
+  if (rcc/2<min(Lx/2,Lz/2)) then
+    !
+    !use verlet list in real space
+    Kmax1 = ceiling(tol*Lx*alpha/pi)
+    Kmax2 = ceiling(tol*Ly*alpha/pi)
+    Kmax3 = ceiling(tol*Lz*Z_empty*alpha/pi)
+  else
+    rcc = min(Lx/2,Lz/2)-0.5
+    write(*,*) rcc
+    Kmax1    = ceiling(tol*tol/pi*Lx/rcc)
+    Kmax2    = ceiling(tol*tol/pi*Ly/rcc)
+    Kmax3    = ceiling(tol*tol/pi*Lz*Z_empty/rcc)
+    alpha    = tol / rcc
+    alpha2   = alpha * alpha
+    rcc = rcc*2
+    rcc2 = rcc * rcc
+  end if
   !
   !Cell list parameters
   nclx = int(Lx2/(rcc+1))     !cell numbers in x direction
@@ -1359,20 +1414,26 @@ subroutine Initialize_cell_list_q_Ewald
   implicit none
   integer :: i, j, k
 
+  if (allocated(cell_list_q)) deallocate(cell_list_q)
+  if (allocated(inv_cell_list_q)) deallocate(inv_cell_list_q)
   allocate(cell_list_q(Nq+1))     ! the last one is head of the list
   allocate(inv_cell_list_q(Nq+1)) ! the last one is the head of the list
 
   !assume initial state, all particles are charged.
-  cell_list_q(Nq+1) = 0
+  cell_list_q = 0
   do i = 1, Nq
-    cell_list_q(i) = cell_list_q(Nq+1)
-    cell_list_q(Nq+1) = i
+    if (pos(charge(i),4)/=0) then
+      cell_list_q(i) = cell_list_q(Nq+1)
+      cell_list_q(Nq+1) = i
+    end if
   end do
 
   inv_cell_list_q(Nq+1) = 0
   do i = Nq, 1, -1
-    inv_cell_list_q(i) = inv_cell_list_q(Nq+1)
-    inv_cell_list_q(Nq+1) = i
+    if (pos(charge(i),4)/=0) then
+      inv_cell_list_q(i) = inv_cell_list_q(Nq+1)
+      inv_cell_list_q(Nq+1) = i
+    end if
   end do
 
   open(112,file='./data/cell_list_q.txt')
@@ -1392,11 +1453,15 @@ subroutine Initialize_real_cell_list_Ewald
 
   !
   ! maxium situation, (125,125,100), 6.2Mb RAM is needed.
+  if (allocated(hoc_r)) deallocate(hoc_r)
+  if (allocated(inv_hoc_r)) deallocate(inv_hoc_r)
   allocate(hoc_r(nclx,ncly,nclz))
   allocate(inv_hoc_r(nclx,ncly,nclz))
   hoc_r = 0
   inv_hoc_r = 0
 
+  if (allocated(cell_list_r)) deallocate(cell_list_r)
+  if (allocated(inv_cell_list_r)) deallocate(inv_cell_list_r)
   allocate(cell_list_r(Nq))
   allocate(inv_cell_list_r(Nq))
   cell_list_r = 0
@@ -1404,24 +1469,29 @@ subroutine Initialize_real_cell_list_Ewald
 
   do i = 1, Nq
     j = charge(i)
-    icelx = int((pos(j,1)-1)/clx) + 1
-    icely = int((pos(j,2)-1)/cly) + 1
-    icelz = int((pos(j,3)-1)/clz) + 1
-    cell_list_r(i) = hoc_r(icelx,icely,icelz)
-    hoc_r(icelx,icely,icelz) = i
+    if (pos(j,4)/=0) then
+      icelx = int((pos(j,1)-1)/clx) + 1
+      icely = int((pos(j,2)-1)/cly) + 1
+      icelz = int((pos(j,3)-1)/clz) + 1
+      cell_list_r(i) = hoc_r(icelx,icely,icelz)
+      hoc_r(icelx,icely,icelz) = i
+    end if
   end do
 
   do i = Nq, 1, -1
     j = charge(i)
-    icelx = int((pos(j,1)-1)/clx) + 1
-    icely = int((pos(j,2)-1)/cly) + 1
-    icelz = int((pos(j,3)-1)/clz) + 1
-    inv_cell_list_r(i) = inv_hoc_r(icelx,icely,icelz)
-    inv_hoc_r(icelx,icely,icelz) = i
+    if (pos(j,4)/=0) then
+      icelx = int((pos(j,1)-1)/clx) + 1
+      icely = int((pos(j,2)-1)/cly) + 1
+      icelz = int((pos(j,3)-1)/clz) + 1
+      inv_cell_list_r(i) = inv_hoc_r(icelx,icely,icelz)
+      inv_hoc_r(icelx,icely,icelz) = i
+    end if
   end do
 
   !
   ! maxium situation, (125*125*100,28,3), 500Mb RAM is needed.
+  if(allocated(cell_near_list)) deallocate(cell_near_list)
   allocate(cell_near_list(nclx*ncly*nclz,28,3))
   cell_near_list = 0
   m = 0
@@ -1630,7 +1700,6 @@ subroutine build_rho_k
     n = charge(m)
     zq(m) = pos(n,4)
   end do
-
   c1 = 2*pi/Lx
   c2 = 2*pi/Ly
   c3 = 2*pi/Lz/Z_empty

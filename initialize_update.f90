@@ -231,31 +231,12 @@ subroutine error_analysis(n, EE)
   implicit none
   integer, intent(in) :: n
   real*8, intent(out) :: EE
-  real*8 :: EE1, EE2, absolute_error, relative_error
-  real*8 :: real_time, fourier_time
 
-!   call energy_ewald_module(n, EE1)
-
-  EE1=0
-  call total_energy_ewald(EE2, real_time, fourier_time)
-
-  write(*,*) 'EE',EE2
-
-  absolute_error = abs(EE2-EE1)
-
-  relative_error = absolute_error / EE1
-
-  EE = EE2
-
-  write(*,*) 
-  write(*,*) '******************error_analysis********************'
-  write(*,*) 'absolute error         absolute_error:', absolute_error
-  write(*,*) 'relative error         relative_error:', relative_error
-  write(*,*) 'real time                   real_time:', real_time
-  write(*,*) 'fourier time             fourier_time:', fourier_time
-  write(*,*) '****************************************************'
-  write(*,*) 
-  write(*,*) 
+  if (n==0) then
+    call error_analysis_ewald(EE)
+  else
+    call total_energy_ewald(EE)
+  end if
 
 end subroutine error_analysis
 
