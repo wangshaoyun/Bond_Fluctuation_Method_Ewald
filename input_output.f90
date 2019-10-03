@@ -622,7 +622,7 @@ subroutine write_pos1(l)
   close(108)
 
   open(109,file='./start_time.txt')
-    write(109,*) 1
+    write(109,*) 0
     write(109,*) l
     write(109,*) Nq_net
     call cpu_time(finished)
@@ -733,7 +733,7 @@ subroutine write_energy(j,EE,EE1)
   open(36,position='append', file='./data/energy.txt')
     write(36,361) 1.*j, EE, EE1, Nq_net*1.D0/Nq_PE*100, NN-(Npe-Nq_net)*2.D0,&
                   accept_ratio, rmse*100
-    361 format(7F11.3)
+    361 format(7F15.3)
   close(36)  
 
 end subroutine write_energy

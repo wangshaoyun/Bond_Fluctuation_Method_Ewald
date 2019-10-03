@@ -271,24 +271,34 @@ subroutine monte_carlo_move( EE, DeltaE )
 accept = 0
 call cpu_time(st)
   do i = 1, NN - Nga
-    if ( mod(i,DeltaStep) == 0 .and. qq/=0 .and. pH_or_not/=0 ) then
+    if ( mod(step,multistep)==0 .and. i==1 .and. multistep/=1 .and. qq/=1) then
+
+      call Initialize_cell_list_q_Ewald
+
+      call Initialize_real_cell_list_Ewald
+
+      call build_rho_k
+      
+    end if
+    if ( mod(i,DeltaStep) == 0 .and. qq/=0 .and. pH_or_not/=0 &
+         .and. mod(step,multistep)==0) then
       call choose_particle_pH
       if (pos(ip,4)==0) then
-!         call total_energy_ewald(EE1, real_time, fourier_time)
+!         call total_energy_ewald(EE1)
         call add_particle(EE,DeltaE)
-!         call total_energy_ewald(EE2, real_time, fourier_time)
+!         call total_energy_ewald(EE2)
 !         write(*,*) 'add',EE2-EE1,DeltaE,EE2,EE,ip
       else
-!         call total_energy_ewald(EE1, real_time, fourier_time)
+!         call total_energy_ewald(EE1)
         call delete_particle(EE,DeltaE)
-!         call total_energy_ewald(EE2, real_time, fourier_time)
+!         call total_energy_ewald(EE2)
 !         write(*,*) 'delete',EE2-EE1,DeltaE,EE2,EE,ip
       end if
     else
       call choose_particle
-!       call total_energy_ewald(EE1, real_time, fourier_time)
-      call new_position(EE,DeltaE,i)
-!       call total_energy_ewald(EE2, real_time, fourier_time)
+!       call total_energy_ewald(EE1)
+      call new_position(EE,DeltaE)
+!       call total_energy_ewald(EE2)
 !       write(*,*) 'move',EE2-EE1,DeltaE,EE2,EE,ip
     end if
   end do
@@ -466,13 +476,12 @@ subroutine delete_particle(EE, DeltaE)
 end subroutine delete_particle
 
 
-subroutine new_position(EE, DeltaE, stepi)
+subroutine new_position(EE, DeltaE)
   use global_variables
   use compute_energy_ewald
   implicit none
   real*8,  intent(out)   :: DeltaE
   real*8,  intent(inout) :: EE
-  integer, intent(in)    :: stepi
   integer :: dir  ! direction, with 6 choice
   integer :: bn   ! number of bonds connect to the particle
   integer, allocatable, dimension(:) :: new_bonds
@@ -520,8 +529,8 @@ subroutine new_position(EE, DeltaE, stepi)
       testlat = latt(xp2,iy,iz)  + latt(xp2,yp1,iz) + &
                 latt(xp2,iy,zp1) + latt(xp2,yp1,zp1)
       if( testlat == 0 ) then
-        if (pos_ip1(4)/=0) then
-          call Delta_Energy_Ewald(DeltaE,stepi)
+        if (pos_ip1(4)/=0 .and. mod(step,multistep)==0 ) then
+          call Delta_Energy_Ewald(DeltaE)
         else
           DeltaE = 0
         end if
@@ -541,7 +550,7 @@ subroutine new_position(EE, DeltaE, stepi)
           latt(ix,yp1,iz)   = 0 
           latt(ix,iy,zp1)   = 0 
           latt(ix,yp1,zp1)  = 0 
-          if (pos_ip1(4)/=0) then
+          if (pos_ip1(4)/=0  ) then
             call update_real_cell_list_Ewald
           end if
           accept = accept + 1
@@ -563,7 +572,7 @@ subroutine new_position(EE, DeltaE, stepi)
             latt(ix,yp1,iz)   = 0 
             latt(ix,iy,zp1)   = 0 
             latt(ix,yp1,zp1)  = 0 
-            if (pos_ip1(4)/=0) then
+            if (pos_ip1(4)/=0  ) then
               call update_real_cell_list_Ewald
             end if
             accept = accept + 1
@@ -578,8 +587,8 @@ subroutine new_position(EE, DeltaE, stepi)
       testlat = latt(xm1,iy,iz)  + latt(xm1,yp1,iz) + &
          &      latt(xm1,iy,zp1) + latt(xm1,yp1,zp1)
       if( testlat == 0 ) then
-        if (pos_ip1(4)/=0) then
-          call Delta_Energy_Ewald(DeltaE,stepi)
+        if (pos_ip1(4)/=0 .and. mod(step,multistep)==0 ) then
+          call Delta_Energy_Ewald(DeltaE)
         else
           DeltaE = 0
         end if
@@ -599,7 +608,7 @@ subroutine new_position(EE, DeltaE, stepi)
           latt(xp1,yp1,iz)  = 0 
           latt(xp1,iy,zp1)  = 0
           latt(xp1,yp1,zp1) = 0 
-          if (pos_ip1(4)/=0) then
+          if (pos_ip1(4)/=0  ) then
             call update_real_cell_list_Ewald
           end if
           accept = accept + 1
@@ -621,7 +630,7 @@ subroutine new_position(EE, DeltaE, stepi)
             latt(xp1,yp1,iz)  = 0 
             latt(xp1,iy,zp1)  = 0 
             latt(xp1,yp1,zp1) = 0
-            if (pos_ip1(4)/=0) then
+            if (pos_ip1(4)/=0 ) then
               call update_real_cell_list_Ewald
             end if
             accept = accept + 1
@@ -635,8 +644,8 @@ subroutine new_position(EE, DeltaE, stepi)
       testlat = latt(ix,yp2,iz)  + latt(xp1,yp2,iz) + &
         &       latt(ix,yp2,zp1) + latt(xp1,yp2,zp1)
       if( testlat == 0 ) then
-        if (pos_ip1(4)/=0) then
-          call Delta_Energy_Ewald(DeltaE,stepi)
+        if (pos_ip1(4)/=0 .and. mod(step,multistep)==0 ) then
+          call Delta_Energy_Ewald(DeltaE)
         else
           DeltaE = 0
         end if
@@ -656,7 +665,7 @@ subroutine new_position(EE, DeltaE, stepi)
           latt(xp1,iy,iz)   = 0 
           latt(ix,iy,zp1)   = 0 
           latt(xp1,iy,zp1)  = 0 
-          if (pos_ip1(4)/=0) then
+          if (pos_ip1(4)/=0  ) then
             call update_real_cell_list_Ewald
           end if
           accept = accept + 1
@@ -678,7 +687,7 @@ subroutine new_position(EE, DeltaE, stepi)
             latt(xp1,iy,iz)   = 0 
             latt(ix,iy,zp1)   = 0 
             latt(xp1,iy,zp1)  = 0 
-            if (pos_ip1(4)/=0) then
+            if (pos_ip1(4)/=0  ) then
               call update_real_cell_list_Ewald
             end if
             accept = accept + 1
@@ -693,8 +702,8 @@ subroutine new_position(EE, DeltaE, stepi)
       testlat = latt(ix,ym1,iz)  + latt(xp1,ym1,iz) + &
        &        latt(ix,ym1,zp1) + latt(xp1,ym1,zp1)
       if( testlat == 0 ) then
-        if (pos_ip1(4)/=0) then
-          call Delta_Energy_Ewald(DeltaE,stepi)
+        if (pos_ip1(4)/=0 .and. mod(step,multistep)==0) then
+          call Delta_Energy_Ewald(DeltaE)
         else
           DeltaE = 0
         end if
@@ -714,7 +723,7 @@ subroutine new_position(EE, DeltaE, stepi)
           latt(xp1,yp1,iz)  = 0 
           latt(ix,yp1,zp1)  = 0 
           latt(xp1,yp1,zp1) = 0 
-          if (pos_ip1(4)/=0) then
+          if (pos_ip1(4)/=0  ) then
             call update_real_cell_list_Ewald
           end if
           accept = accept + 1
@@ -736,7 +745,7 @@ subroutine new_position(EE, DeltaE, stepi)
             latt(xp1,yp1,iz)  = 0 
             latt(ix,yp1,zp1)  = 0 
             latt(xp1,yp1,zp1) = 0 
-            if (pos_ip1(4)/=0) then
+            if (pos_ip1(4)/=0  ) then
               call update_real_cell_list_Ewald
             end if
             accept = accept + 1
@@ -750,8 +759,8 @@ subroutine new_position(EE, DeltaE, stepi)
       testlat = latt(ix,iy,zp2)  + latt(xp1,iy,zp2) + &
          &      latt(ix,yp1,zp2) + latt(xp1,yp1,zp2)
       if( testlat == 0 ) then
-        if (pos_ip1(4)/=0) then
-          call Delta_Energy_Ewald(DeltaE,stepi)
+        if (pos_ip1(4)/=0 .and. mod(step,multistep)==0 ) then
+          call Delta_Energy_Ewald(DeltaE)
         else
           DeltaE = 0
         end if
@@ -771,7 +780,7 @@ subroutine new_position(EE, DeltaE, stepi)
           latt(xp1,iy,iz)   = 0 
           latt(ix,yp1,iz)   = 0 
           latt(xp1,yp1,iz)  = 0 
-          if (pos_ip1(4)/=0) then
+          if (pos_ip1(4)/=0   ) then
             call update_real_cell_list_Ewald
           end if
           accept = accept + 1
@@ -793,7 +802,7 @@ subroutine new_position(EE, DeltaE, stepi)
             latt(xp1,iy,iz)   = 0 
             latt(ix,yp1,iz)   = 0 
             latt(xp1,yp1,iz)  = 0 
-            if (pos_ip1(4)/=0) then
+            if (pos_ip1(4)/=0   ) then
               call update_real_cell_list_Ewald
             end if
             accept = accept + 1
@@ -808,8 +817,8 @@ subroutine new_position(EE, DeltaE, stepi)
       testlat = latt(ix,iy,zm1)  + latt(xp1,iy,zm1) + &
        &        latt(ix,yp1,zm1) + latt(xp1,yp1,zm1)
       if( testlat == 0 ) then
-        if (pos_ip1(4)/=0) then
-          call Delta_Energy_Ewald(DeltaE,stepi)
+        if (pos_ip1(4)/=0 .and. mod(step,multistep)==0 ) then
+          call Delta_Energy_Ewald(DeltaE)
         else
           DeltaE = 0
         end if
@@ -829,7 +838,7 @@ subroutine new_position(EE, DeltaE, stepi)
           latt(xp1,iy,zp1)  = 0 
           latt(ix,yp1,zp1)  = 0 
           latt(xp1,yp1,zp1) = 0 
-          if (pos_ip1(4)/=0) then
+          if (pos_ip1(4)/=0   ) then
             call update_real_cell_list_Ewald
           end if
           accept = accept + 1
@@ -851,7 +860,7 @@ subroutine new_position(EE, DeltaE, stepi)
             latt(xp1,iy,zp1)  = 0 
             latt(ix,yp1,zp1)  = 0 
             latt(xp1,yp1,zp1) = 0 
-            if (pos_ip1(4)/=0) then
+            if (pos_ip1(4)/=0   ) then
               call update_real_cell_list_Ewald
             end if
             accept = accept + 1

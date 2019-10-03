@@ -61,6 +61,7 @@ implicit none
         call error_analysis(0, EE1)
         call write_energy(step,EE,EE1)
         call write_pos1(step)
+        EE = EE1
       end if
     end do
     i=step

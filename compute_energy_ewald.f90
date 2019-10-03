@@ -333,7 +333,7 @@ subroutine total_energy_ewald(EE)
 end subroutine total_energy_ewald
 
 
-subroutine Delta_Energy_Ewald(DeltaE,stepi)
+subroutine Delta_Energy_Ewald(DeltaE)
   !--------------------------------------!
   !Compute change of energy.
   !   
@@ -353,18 +353,14 @@ subroutine Delta_Energy_Ewald(DeltaE,stepi)
   use global_variables
   implicit none
 	real*8,  intent(out) :: DeltaE
-  integer, intent(in) :: stepi
 
   DeltaE = 0
-  if ( mod(step,multistep)==0 .and. stepi==1) then
-    call build_rho_k
-    !
-    !Compute coulomb energy change in real space
-    call Delta_real_Energy(DeltaE)
-    !
-    !Compute coulomb energy change in reciprocal space
-    call Delta_Reciprocal_Energy(DeltaE)
-  end if
+  !
+  !Compute coulomb energy change in real space
+  call Delta_real_Energy(DeltaE)
+  !
+  !Compute coulomb energy change in reciprocal space
+  call Delta_Reciprocal_Energy(DeltaE)    
 
 end subroutine Delta_Energy_Ewald
 
@@ -1298,14 +1294,14 @@ subroutine Initialize_ewald_parameters
   alpha2   = alpha * alpha
   rcc  = tol / alpha * 2
   rcc2 = rcc * rcc
-  if (rcc/2<min(Lx/2,Lz/2)) then
+  if (rcc/2<min(Lx/3,Lz/3)) then
     !
     !use verlet list in real space
     Kmax1 = ceiling(tol*Lx*alpha/pi)
     Kmax2 = ceiling(tol*Ly*alpha/pi)
     Kmax3 = ceiling(tol*Lz*Z_empty*alpha/pi)
   else
-    rcc = min(Lx/2,Lz/2)-0.5
+    rcc = min(Lx/3,Lz/3)-0.1
     write(*,*) rcc
     Kmax1    = ceiling(tol*tol/pi*Lx/rcc)
     Kmax2    = ceiling(tol*tol/pi*Ly/rcc)
@@ -1317,9 +1313,9 @@ subroutine Initialize_ewald_parameters
   end if
   !
   !Cell list parameters
-  nclx = int(Lx2/(rcc+1))     !cell numbers in x direction
-  ncly = int(Ly2/(rcc+1))
-  nclz = int(Lz2/(rcc+1))
+  nclx = int(Lx2/(rcc+0.1))     !cell numbers in x direction
+  ncly = int(Ly2/(rcc+0.1))
+  nclz = int(Lz2/(rcc+0.1))
   clx = 1.D0*Lx2/nclx         !cell length    
   cly = 1.D0*Ly2/ncly
   clz = 1.D0*Lz2/nclz
@@ -1385,7 +1381,6 @@ subroutine Build_Charge_Ewald
   implicit none
   integer :: i, j
 
-  Mz = 0
   if (allocated(charge)) deallocate(charge)
   allocate(charge(Nq))
   if (allocated(inv_charge)) deallocate(inv_charge)
@@ -1396,7 +1391,6 @@ subroutine Build_Charge_Ewald
     if ( pos(i,4) /= 0 ) then
       j = j + 1
       charge(j) = i
-      Mz = Mz + pos(i,4)*pos(i,3)/2.D0 !sigma unit
     end if
   end do
 
@@ -1471,6 +1465,11 @@ subroutine Initialize_real_cell_list_Ewald
   cell_list_r = 0
   inv_cell_list_r = 0
 
+  Mz = 0
+  do i = 1, NN
+    Mz = Mz + pos(i,4)*pos(i,3)/2.D0 !sigma unit
+  end do
+
   do i = 1, Nq
     j = charge(i)
     if (pos(j,4)/=0) then
@@ -1534,11 +1533,11 @@ subroutine Initialize_real_cell_list_Ewald
     end do
   end do
 
-!   open(113,file='./data/cell_list_r.txt')
-!     do i = 1, Nq
-!       write(113,*) i, cell_list_r(i), inv_cell_list_r(i)
-!     end do
-!   close(113)
+  open(113,file='./data/cell_list_r.txt')
+    do i = 1, Nq
+      write(113,*) i, cell_list_r(i), inv_cell_list_r(i)
+    end do
+  close(113)
 
 
 !   open(100,file='./data/hoc_r.txt')
