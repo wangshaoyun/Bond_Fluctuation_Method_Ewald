@@ -480,12 +480,15 @@ subroutine continue_read_data(l)
   integer, intent(out) :: l
   integer :: i, j 
   integer, allocatable, dimension(:,:) :: phi
+  integer :: xi,yi,zi,xp,yp,zp
+
+  allocate(phi(Lz2,4))
 
   open(20,file='./data/pos1.txt')
     read(20,*) ((pos(i,j),j=1,4),i=1,NN)
   close(20)
   open(19,file='./start_time.txt')
-    read(19,*)
+    read(19,*) restart_or_continue
     read(19,*) l
     read(19,*) Nq_net
     read(19,*) total_time
@@ -496,6 +499,32 @@ subroutine continue_read_data(l)
       phi_sb(:,2) = phi(:,3)
       phi_se(:,2) = phi(:,4)
   close(22)
+  open(23,file='./data/monbd.txt')
+    read(23,*) ((monbd(i,j),j=1,arm+1),i=1,Npe)
+  close(23)
+  open(24,file='./data/bond_numb1.txt')
+    do i = 1, N_Bond
+      read(24,*) bond_numb(i)
+    end do
+  close(24)
+
+  do i = 1, NN
+    xi = pos(i,1)
+    yi = pos(i,2)
+    zi = pos(i,3)
+    xp = ipx(xi)
+    yp = ipy(yi)
+    zp = ipz(zi)
+    latt(xi,yi,zi) = 1
+    latt(xi,yi,zp) = 1
+    latt(xi,yp,zi) = 1
+    latt(xi,yp,zp) = 1
+    latt(xp,yi,zi) = 1
+    latt(xp,yi,zp) = 1
+    latt(xp,yp,zi) = 1
+    latt(xp,yp,zp) = 1
+  end do
+
 end subroutine continue_read_data
 
 
@@ -622,7 +651,7 @@ subroutine write_pos1(l)
   close(108)
 
   open(109,file='./start_time.txt')
-    write(109,*) 0
+    write(109,*) 1
     write(109,*) l
     write(109,*) Nq_net
     call cpu_time(finished)

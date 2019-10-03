@@ -1199,7 +1199,7 @@ subroutine error_analysis_ewald(EE1)
   !
   !
   call total_energy_ewald(EE0)
-  call write_energy_parameters_Ewald
+!   call write_energy_parameters_Ewald
 
   tol=tol1
   !
@@ -1227,11 +1227,9 @@ subroutine error_analysis_ewald(EE1)
   !
   !
   call total_energy_ewald(EE1)
-  call write_energy_parameters_Ewald
+!   call write_energy_parameters_Ewald
 
   rmse = abs(EE1-EE0)/EE0
-
-  write(*,*) EE0,EE1,rmse
 
 end subroutine error_analysis_ewald
 
@@ -1302,7 +1300,6 @@ subroutine Initialize_ewald_parameters
     Kmax3 = ceiling(tol*Lz*Z_empty*alpha/pi)
   else
     rcc = min(Lx/3,Lz/3)-0.1
-    write(*,*) rcc
     Kmax1    = ceiling(tol*tol/pi*Lx/rcc)
     Kmax2    = ceiling(tol*tol/pi*Ly/rcc)
     Kmax3    = ceiling(tol*tol/pi*Lz*Z_empty/rcc)
