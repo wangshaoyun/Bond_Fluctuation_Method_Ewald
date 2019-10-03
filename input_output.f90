@@ -73,6 +73,7 @@ subroutine read_data
   !
   !read system data
   open(10,file='./system_data.txt')
+    read(10,*) pH_or_not
     read(10,*) Lz2
     read(10,*) Z_empty  
     read(10,*) sigmag   
@@ -84,8 +85,9 @@ subroutine read_data
     read(10,*) Nma
     read(10,*) Nga
     read(10,*) man_s
+    read(10,*) multistep 
     read(10,*) StepNum0           
-    read(10,*) StepNum    
+    read(10,*) StepNum   
     read(10,*) DeltaStep        
     read(10,*) DeltaStep1
     read(10,*) DeltaStep2     
@@ -620,7 +622,7 @@ subroutine write_pos1(l)
   close(108)
 
   open(109,file='./start_time.txt')
-    write(109,*) 0
+    write(109,*) 1
     write(109,*) l
     write(109,*) Nq_net
     call cpu_time(finished)

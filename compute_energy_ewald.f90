@@ -333,7 +333,7 @@ subroutine total_energy_ewald(EE)
 end subroutine total_energy_ewald
 
 
-subroutine Delta_Energy_Ewald(DeltaE)
+subroutine Delta_Energy_Ewald(DeltaE,stepi)
   !--------------------------------------!
   !Compute change of energy.
   !   
@@ -353,14 +353,18 @@ subroutine Delta_Energy_Ewald(DeltaE)
   use global_variables
   implicit none
 	real*8,  intent(out) :: DeltaE
+  integer, intent(in) :: stepi
 
   DeltaE = 0
-  !
-  !Compute coulomb energy change in real space
-  call Delta_real_Energy(DeltaE)
-  !
-  !Compute coulomb energy change in reciprocal space
-  call Delta_Reciprocal_Energy(DeltaE)
+  if ( mod(step,multistep)==0 .and. stepi==1) then
+    call build_rho_k
+    !
+    !Compute coulomb energy change in real space
+    call Delta_real_Energy(DeltaE)
+    !
+    !Compute coulomb energy change in reciprocal space
+    call Delta_Reciprocal_Energy(DeltaE)
+  end if
 
 end subroutine Delta_Energy_Ewald
 
@@ -1695,15 +1699,22 @@ subroutine build_rho_k
   real*8 :: c1, c2, c3
   real*8 :: zq(Nq)
   rho_k = 0
+  zq = 0
+  eikx = 0
+  eiky = 0
+  eikz = 0
 
-  do m = 1, Nq
-    n = charge(m)
-    zq(m) = pos(n,4)
+  m = cell_list_q(Nq+1)
+  do while( cell_list_q(m)/=0 )
+    zq(m) = pos(charge(m),4)
+    m = cell_list_q(m)
   end do
+
   c1 = 2*pi/Lx
   c2 = 2*pi/Ly
   c3 = 2*pi/Lz/Z_empty
-  do m = 1, Nq
+  m = cell_list_q(Nq+1)
+  do while(m /= 0)
     i = charge(m)
     eikx(m,0)  = (1,0)
     eiky(m,0)  = (1,0)
@@ -1715,31 +1726,40 @@ subroutine build_rho_k
 
     eikx(m,-1) = conjg(eikx(m,1))
     eiky(m,-1) = conjg(eiky(m,1))
+    m = cell_list_q(m)
   end do
 
   do p=2, Kmax1
-    do m=1, Nq
+    m = cell_list_q(Nq+1)
+    do while(m/=0)
       eikx(m,p)=eikx(m,p-1)*eikx(m,1)
       eikx(m,-p)=conjg(eikx(m,p))
+      m = cell_list_q(m)
     end do
   end do
   do q=2, Kmax2
-    do m=1, Nq
+    m = cell_list_q(Nq+1)
+    do while(m/=0)
       eiky(m,q)=eiky(m,q-1)*eiky(m,1)
       eiky(m,-q)=conjg(eiky(m,q))
+      m = cell_list_q(m)
     end do
   end do
   do r=2, Kmax3
-    do m=1, Nq
+    m = cell_list_q(Nq+1)
+    do while(m/=0)
       eikz(m,r)=eikz(m,r-1)*eikz(m,1)
+      m = cell_list_q(m)
     end do
   end do
 
   do i = 1, K_total
     ord = totk_vectk(i,:)
-    do m = 1, Nq
+    m = cell_list_q(Nq+1)
+    do while(m/=0)
       rho_k(i) = rho_k(i) + &
                  zq(m) * eikx(m,ord(1)) * eiky(m,ord(2)) * eikz(m,ord(3))
+      m = cell_list_q(m)
     end do
   end do
 

@@ -271,7 +271,7 @@ subroutine monte_carlo_move( EE, DeltaE )
 accept = 0
 call cpu_time(st)
   do i = 1, NN - Nga
-    if ( mod(i,DeltaStep) == 0 .and. Nq/=0 ) then
+    if ( mod(i,DeltaStep) == 0 .and. qq/=0 .and. pH_or_not/=0 ) then
       call choose_particle_pH
       if (pos(ip,4)==0) then
 !         call total_energy_ewald(EE1, real_time, fourier_time)
@@ -287,7 +287,7 @@ call cpu_time(st)
     else
       call choose_particle
 !       call total_energy_ewald(EE1, real_time, fourier_time)
-      call new_position(EE,DeltaE)
+      call new_position(EE,DeltaE,i)
 !       call total_energy_ewald(EE2, real_time, fourier_time)
 !       write(*,*) 'move',EE2-EE1,DeltaE,EE2,EE,ip
     end if
@@ -466,12 +466,13 @@ subroutine delete_particle(EE, DeltaE)
 end subroutine delete_particle
 
 
-subroutine new_position(EE, DeltaE)
+subroutine new_position(EE, DeltaE, stepi)
   use global_variables
   use compute_energy_ewald
   implicit none
   real*8,  intent(out)   :: DeltaE
   real*8,  intent(inout) :: EE
+  integer, intent(in)    :: stepi
   integer :: dir  ! direction, with 6 choice
   integer :: bn   ! number of bonds connect to the particle
   integer, allocatable, dimension(:) :: new_bonds
@@ -520,7 +521,7 @@ subroutine new_position(EE, DeltaE)
                 latt(xp2,iy,zp1) + latt(xp2,yp1,zp1)
       if( testlat == 0 ) then
         if (pos_ip1(4)/=0) then
-          call Delta_Energy_Ewald(DeltaE)
+          call Delta_Energy_Ewald(DeltaE,stepi)
         else
           DeltaE = 0
         end if
@@ -578,7 +579,7 @@ subroutine new_position(EE, DeltaE)
          &      latt(xm1,iy,zp1) + latt(xm1,yp1,zp1)
       if( testlat == 0 ) then
         if (pos_ip1(4)/=0) then
-          call Delta_Energy_Ewald(DeltaE)
+          call Delta_Energy_Ewald(DeltaE,stepi)
         else
           DeltaE = 0
         end if
@@ -635,7 +636,7 @@ subroutine new_position(EE, DeltaE)
         &       latt(ix,yp2,zp1) + latt(xp1,yp2,zp1)
       if( testlat == 0 ) then
         if (pos_ip1(4)/=0) then
-          call Delta_Energy_Ewald(DeltaE)
+          call Delta_Energy_Ewald(DeltaE,stepi)
         else
           DeltaE = 0
         end if
@@ -693,7 +694,7 @@ subroutine new_position(EE, DeltaE)
        &        latt(ix,ym1,zp1) + latt(xp1,ym1,zp1)
       if( testlat == 0 ) then
         if (pos_ip1(4)/=0) then
-          call Delta_Energy_Ewald(DeltaE)
+          call Delta_Energy_Ewald(DeltaE,stepi)
         else
           DeltaE = 0
         end if
@@ -750,7 +751,7 @@ subroutine new_position(EE, DeltaE)
          &      latt(ix,yp1,zp2) + latt(xp1,yp1,zp2)
       if( testlat == 0 ) then
         if (pos_ip1(4)/=0) then
-          call Delta_Energy_Ewald(DeltaE)
+          call Delta_Energy_Ewald(DeltaE,stepi)
         else
           DeltaE = 0
         end if
@@ -808,7 +809,7 @@ subroutine new_position(EE, DeltaE)
        &        latt(ix,yp1,zm1) + latt(xp1,yp1,zm1)
       if( testlat == 0 ) then
         if (pos_ip1(4)/=0) then
-          call Delta_Energy_Ewald(DeltaE)
+          call Delta_Energy_Ewald(DeltaE,stepi)
         else
           DeltaE = 0
         end if

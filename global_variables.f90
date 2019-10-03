@@ -29,6 +29,8 @@ save
   integer :: N_bond   !Number of all bonds in system
   integer :: qq       !Charge of charged monomers
   integer :: qqi      !Charge of salt ions
+  integer :: ph_or_not!0: does not consider ph, 1: consider ph
+  integer :: multistep!each multistep calculate coulomb potential
   real*8  :: ion_ratio!Ratio of salt ions to the charge quantites of PE
   real*8  :: Z_empty  !Empty space ratio of height and length in slab geometry
   real*8  :: sigmag   !Grafting density of brushes on the plate (sigma unit)
