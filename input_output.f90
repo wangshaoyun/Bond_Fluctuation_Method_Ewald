@@ -8,10 +8,18 @@ implicit none
 save
   !mass center height of the star
   real*8 :: hh
+  real*8 :: h_end
+  real*8 :: h_branch
   !height distribution of star, star branch and end
   integer, allocatable, dimension(:,:), private :: phi_s
   integer, allocatable, dimension(:,:), private :: phi_sb
   integer, allocatable, dimension(:,:), private :: phi_se
+  integer, allocatable, dimension(:,:), private :: phi_a    ! anions (p+salt)
+  integer, allocatable, dimension(:,:), private :: phi_as   ! anions (salt)
+  integer, allocatable, dimension(:,:), private :: phi_ap   ! anions (p)
+  integer, allocatable, dimension(:,:), private :: phi_i    ! ions(polymer)
+  integer, allocatable, dimension(:,:), private :: phi_is   ! salt ions
+
 
 contains
 
@@ -224,6 +232,7 @@ subroutine write_data
   write(*,*) 'Preheating steps                   StepNum0:', StepNum0
   write(*,*) 'Running steps                       StepNum:', StepNum
   write(*,*) 'Total steps                StepNum0+StepNum:', (StepNum0+StepNum)
+  write(*,*) 'Step inteval, physical quantum,   DeltaStep:', DeltaStep
   write(*,*) 'Step inteval, physical quantum,  DeltaStep1:', DeltaStep1
   write(*,*) 'Step inteval, histogram,         DeltaStep2:', DeltaStep2
   write(*,*) 'Step inteval, output data,       DeltaStep3:', DeltaStep3
@@ -313,9 +322,19 @@ subroutine data_allocate
   allocate( phi_s(Lz2, 2) )
   allocate( phi_sb(Lz2,2) )
   allocate( phi_se(Lz2,2) )  
+  allocate( phi_a(Lz2, 2) )
+  allocate( phi_as(Lz2,2) )
+  allocate( phi_ap(Lz2,2) ) 
+  allocate( phi_i(Lz2, 2) )
+  allocate( phi_is(Lz2,2) )
   phi_s = 0
   phi_sb = 0
   phi_se = 0 
+  phi_a = 0
+  phi_as = 0
+  phi_ap = 0
+  phi_i = 0
+  phi_is = 0
 
 end subroutine data_allocate
 
@@ -482,7 +501,7 @@ subroutine continue_read_data(l)
   integer, allocatable, dimension(:,:) :: phi
   integer :: xi,yi,zi,xp,yp,zp
 
-  allocate(phi(Lz2,4))
+  allocate(phi(Lz2,9))
 
   open(20,file='./data/pos1.txt')
     read(20,*) ((pos(i,j),j=1,4),i=1,NN)
@@ -494,10 +513,15 @@ subroutine continue_read_data(l)
     read(19,*) total_time
   close(19)
   open(22,file='./data/phi.txt')
-    read(22,*) ((phi(i,j),j=1,4),i=1,Lz2)
+    read(22,*) ((phi(i,j),j=1,9),i=1,Lz2)
       phi_s(:,2) = phi(:,2)
       phi_sb(:,2) = phi(:,3)
       phi_se(:,2) = phi(:,4)
+      phi_a(:,2) = phi(:,5)
+      phi_as(:,2) = phi(:,6)
+      phi_ap(:,2) = phi(:,7)
+      phi_i(:,2) = phi(:,8)
+      phi_is(:,2) = phi(:,9)
   close(22)
   open(23,file='./data/monbd.txt')
     read(23,*) ((monbd(i,j),j=1,arm+1),i=1,Npe)
@@ -540,13 +564,25 @@ subroutine compute_physical_quantities
   !----------------------------------------!
   use global_variables
   implicit none
-  integer i
+  integer i,j,k
   
   hh = 0
   do i = 1, Npe
     hh = hh + pos(i,3)
   end do
   hh = hh / Npe
+  h_end = 0
+  h_branch = 0
+  do i = 1, Nga
+    do j = 2, arm
+      k = (i-1)*Ns+j*Nma+1
+      h_end = h_end + pos(k,3)
+    end do
+    k = (i-1)*Ns+Nma+1
+    h_branch = h_branch + pos(k,3)
+  end do
+  h_end = h_end/(Nga*(arm-1))
+  h_branch = h_branch/Nga
   
 end subroutine compute_physical_quantities
 
@@ -572,6 +608,9 @@ subroutine histogram
     if ( mod(i,(arm*Nma+1))==1 .and. i<=Npe ) cycle
     k = pos(i,3)
     phi_s(k,2) = phi_s(k,2) + 1
+    if (pos(i,4)/=0) then
+      phi_i(k,2) = phi_i(k,2) + 1
+    end if
   end do
   do i = 1, Nga
     j = pos((i-1)*(arm*Nma+1)+Nma+1,3)
@@ -580,6 +619,22 @@ subroutine histogram
       k = pos((i-1)*(arm*Nma+1)+Nma+1+(arm-1)*Nma,3)
       phi_se(k,2) = phi_se(k,2) + 1
     end do
+  end do
+  do i = Npe+1, Npe+Nq_PE*abs(qq)
+    if (pos(i,4)/=0) then
+      j = pos(i,3)
+      phi_a(j,2) = phi_a(j,2) + 1
+      phi_ap(j,2) = phi_ap(j,2) + 1
+    end if
+  end do
+  do i = Npe+Nq_PE*abs(qq)+1, NN - Nq_salt_ions
+    j = pos(i,3)
+    phi_a(j,2) = phi_a(j,2) + 1
+    phi_as(j,2) = phi_as(j,2) + 1  
+  end do
+  do i = NN - Nq_salt_ions+1, NN
+    j = pos(i,3)
+    phi_is(j,2) = phi_is(j,2) + 1
   end do
 
 end subroutine histogram
@@ -728,9 +783,10 @@ subroutine write_hist
   
   open(34,file='./data/phi.txt')
     do i=1,Lz2
-      write(34,340) i, phi_s(i,2), phi_sb(i,2), phi_se(i,2)
+      write(34,340) i, phi_s(i,2), phi_sb(i,2), phi_se(i,2), phi_a(i,2),&
+       phi_as(i,2), phi_ap(i,2), phi_i(i,2), phi_is(i,2)
     end do
-    340 format(4I10)
+    340 format(9I10)
   close(34)
 
 end subroutine write_hist
@@ -745,8 +801,8 @@ subroutine write_physical_quantities(j)
   integer, intent(in) :: j
   
   open(110,position='append', file='./data/height.txt')
-    write(110,1100) 1.*j, hh
-    1100 format(2F15.6)
+    write(110,1100) 1.*j, hh, h_end, h_branch
+    1100 format(4F15.6)
   close(110)
 
 end subroutine write_physical_quantities
@@ -762,7 +818,7 @@ subroutine write_energy(j,EE,EE1)
   open(36,position='append', file='./data/energy.txt')
     write(36,361) 1.*j, EE, EE1, Nq_net*1.D0/Nq_PE*100, NN-(Npe-Nq_net)*2.D0,&
                   accept_ratio, rmse*100
-    361 format(7F15.3)
+    361 format(7F17.5)
   close(36)  
 
 end subroutine write_energy

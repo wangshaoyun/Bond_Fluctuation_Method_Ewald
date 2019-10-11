@@ -164,9 +164,9 @@ subroutine initialize_energy_arrays_ewald
     !
     !Construct the structure factor rho_k
     call build_rho_k
-  end if
 
-  call write_energy_parameters_Ewald
+    call write_energy_parameters_Ewald
+  end if
 
 end subroutine initialize_energy_arrays_ewald
 

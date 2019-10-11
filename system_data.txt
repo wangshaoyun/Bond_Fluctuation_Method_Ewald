@@ -11,8 +11,8 @@
 36              ! Nga: grafting number of star brushes
 5               ! man_s: Manning effect : every 'man' particle have one charge
 1               ! multistep
-200000          ! StepNum0
-200000          ! StepNum:  steps of running
+1000000         ! StepNum0
+2000000         ! StepNum:  steps of running
 20              ! DeltaStep: interval of pH move
 200             ! DeltaStep1: height
 200             ! DeltaStep2: histogram
