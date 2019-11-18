@@ -20,9 +20,7 @@ save
   integer, allocatable, dimension(:,:), private :: phi_i    ! ions(polymer)
   integer, allocatable, dimension(:,:), private :: phi_is   ! salt ions
 
-
 contains
-
 
 subroutine initialize_parameters
   !--------------------------------------!
