@@ -237,9 +237,7 @@ subroutine error_analysis(n, EE)
   else
     call total_energy_ewald(EE)
   end if
-
-  write(*,*) 'initial energy',EE
-
+  
 end subroutine error_analysis
 
 
@@ -294,7 +292,7 @@ call cpu_time(st)
 !         call total_energy_ewald(EE1)
         call delete_particle(EE,DeltaE)
 !         call total_energy_ewald(EE2)
-!         write(*,*) 'delete',EE2-EE1,DeltaE,EE2,EE,ip
+!         write(*,*) 'delete',EE2-EE1,DeltaE,ip
       end if
     else
       call choose_particle
@@ -321,7 +319,7 @@ subroutine choose_particle
 
   !
   !The monomer anchored on the plate can't move, so we need to choose again.
-  do while( mod(ip,Ns) == 1 .and. ip <= Npe )
+  do while( (mod(ip,Ns) == 1.and.ip<=Npe).or.(ip>Npe.and.pos(ip,4)==0))
     call random_number(rnd)
     ip = int(rnd*NN) + 1
   end do
@@ -380,6 +378,8 @@ subroutine add_particle(EE,DeltaE)
           latt(xp,yi,zi)+latt(xp,yi,zp)+latt(xp,yp,zi)+latt(xp,yp,zp)
   if (total == 0) then
     call Delta_Energy_Ewald_add(DeltaE)
+    tts=tts+DeltaE
+    write(*,*) DeltaE, tts
     if ((DeltaE+U_prot)<0) then
       latt(xi,yi,zi) = 1
       latt(xi,yi,zp) = 1
@@ -442,6 +442,7 @@ subroutine delete_particle(EE, DeltaE)
   zp = ipz(zi)
 
   call Delta_Energy_Ewald_delete(DeltaE)
+!   write(*,*) DeltaE
   if ((DeltaE-U_prot)<0) then
     latt(xi,yi,zi) = 0
     latt(xi,yi,zp) = 0

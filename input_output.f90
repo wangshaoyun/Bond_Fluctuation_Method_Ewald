@@ -814,8 +814,8 @@ subroutine write_energy(j,EE,EE1)
   real*8, intent(in) :: EE1
 
   open(36,position='append', file='./data/energy.txt')
-    write(36,361) 1.*j, EE, EE1, Nq_net*1.D0/Nq_PE*100, NN-(Npe-Nq_net)*2.D0,&
-                  accept_ratio, rmse*100
+    write(36,361) 1.*j, EE, EE1, Nq_net*1.D0/Nq_PE*100, &
+                NN-Npe-(Nq_pe-Nq_net)*2.,accept_ratio, rmse*100
     361 format(7F17.5)
   close(36)  
 

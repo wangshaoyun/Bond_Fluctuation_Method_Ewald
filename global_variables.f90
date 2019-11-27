@@ -41,6 +41,7 @@ save
   integer :: accept   !accepted move
   real*8  :: accept_ratio 
   real*8  :: rmse
+  real*8  :: tts=0
 !##########################################################!
 
 !##################running and Histogram###################!

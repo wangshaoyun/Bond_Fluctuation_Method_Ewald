@@ -287,6 +287,7 @@ subroutine total_energy_ewald(EE)
   !real space
   do i = 1, Nq
     m = charge(i)
+    if (pos(m,4)==0) cycle
     EE1 = 0
     icelx = int((pos(m,1)-1)/clx)+1
     icely = int((pos(m,2)-1)/cly)+1
@@ -1376,7 +1377,13 @@ subroutine Build_Charge_Ewald
   !--------------------------------------!
   use global_variables
   implicit none
+  integer, allocatable, dimension(:,:) :: pos11   
   integer :: i, j
+
+  allocate(pos11(NN,4))
+  open(20,file='./data/pos.txt')
+    read(20,*) ((pos11(i,j),j=1,4),i=1,NN)
+  close(20)
 
   if (allocated(charge)) deallocate(charge)
   allocate(charge(Nq))
@@ -1385,7 +1392,7 @@ subroutine Build_Charge_Ewald
 
   j = 0
   do i = 1, NN
-    if ( pos(i,4) /= 0 ) then
+    if ( pos11(i,4) /= 0 ) then
       j = j + 1
       charge(j) = i
     end if
@@ -1393,13 +1400,15 @@ subroutine Build_Charge_Ewald
 
   j = 0
   do i = 1, NN
-    if ( pos(i,4) /= 0 ) then
+    if ( pos11(i,4) /= 0 ) then
       j = j + 1
       inv_charge(i) = j
     else
       inv_charge(i) = 0
     end if
   end do
+
+  deallocate(pos11)
 
 end subroutine Build_Charge_Ewald
 
