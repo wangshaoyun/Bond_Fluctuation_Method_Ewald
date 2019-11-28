@@ -284,27 +284,17 @@ call cpu_time(st)
          .and. mod(step,multistep)==0) then
       call choose_particle_pH
       if (pos(ip,4)==0) then
-!         call total_energy_ewald(EE1)
         call add_particle(EE,DeltaE)
-!         call total_energy_ewald(EE2)
-!         write(*,*) 'add',EE2-EE1,DeltaE,EE2,EE,ip
       else
-!         call total_energy_ewald(EE1)
         call delete_particle(EE,DeltaE)
-!         call total_energy_ewald(EE2)
-!         write(*,*) 'delete',EE2-EE1,DeltaE,ip
       end if
     else
       call choose_particle
-!       call total_energy_ewald(EE1)
       call new_position(EE,DeltaE)
-!       call total_energy_ewald(EE2)
-!       write(*,*) 'move',EE2-EE1,DeltaE,EE2,EE,ip
     end if
   end do
 call cpu_time(fn)
 accept_ratio=1.*accept/(NN-Nga)
-! write(*,*) fn-st,1.*accept/(NN-Nga),EE,DeltaE
 
 end subroutine monte_carlo_move
 
@@ -374,12 +364,10 @@ subroutine add_particle(EE,DeltaE)
   xp = ipx(xi)
   yp = ipy(yi)
   zp = ipz(zi)
-  total = latt(xi,yi,zi)+latt(xi,yi,zp)+latt(xi,yp,zi)+latt(xi,yp,zp) +   &
+  total = latt(xi,yi,zi)+latt(xi,yi,zp)+latt(xi,yp,zi)+latt(xi,yp,zp) + &
           latt(xp,yi,zi)+latt(xp,yi,zp)+latt(xp,yp,zi)+latt(xp,yp,zp)
   if (total == 0) then
     call Delta_Energy_Ewald_add(DeltaE)
-    tts=tts+DeltaE
-    write(*,*) DeltaE, tts
     if ((DeltaE+U_prot)<0) then
       latt(xi,yi,zi) = 1
       latt(xi,yi,zp) = 1
@@ -442,7 +430,6 @@ subroutine delete_particle(EE, DeltaE)
   zp = ipz(zi)
 
   call Delta_Energy_Ewald_delete(DeltaE)
-!   write(*,*) DeltaE
   if ((DeltaE-U_prot)<0) then
     latt(xi,yi,zi) = 0
     latt(xi,yi,zp) = 0
