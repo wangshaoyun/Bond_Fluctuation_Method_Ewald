@@ -46,3 +46,5 @@ data/energy.txt
 data/height.txt
 main
 data/cell_list_r.txt
+data/phi_zx.txt
+data/phi_xy.txt

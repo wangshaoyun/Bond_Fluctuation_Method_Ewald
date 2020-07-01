@@ -67,17 +67,17 @@ implicit none
   end if
 
   !################running###############!
-  do step=i,StepNum0+StepNum            
+  do step=i,StepNum0+StepNum
     call monte_carlo_move(EE, DeltaE)
     if ( mod(step,DeltaStep1) == 0 ) then
       call compute_physical_quantities
       call write_physical_quantities( step )
     end if
-    if ( mod(step,DeltaStep2) == 0 ) then     
+    if ( mod(step,DeltaStep2) == 0 ) then
       call histogram
     end if
     if ( mod(step,DeltaStep3) == 0 ) then
-      call write_pos1(step)               
+      call write_pos1(step)
       call write_hist
     end if
   end do

@@ -338,10 +338,15 @@ subroutine add_particle(EE,DeltaE)
   implicit none
   real*8, intent(inout) :: EE
   real*8, intent(out) :: DeltaE
-  real*8 :: rnd(3), U_prot, rnd1
+  real*8 :: rnd(3), U_prot, rnd1, Delta_Prob
   integer :: xi,yi,zi,xp,yp,zp,total
 
   U_prot = log(10.D0)/beta*pH_pKa !+: add, -:delete
+  if (Nq_net/=0) then
+    Delta_Prob = ( Npe - Nq_net ) / Nq_net * exp(-(DeltaE-U_prot)*beta)
+  else
+    Delta_Prob = 1
+  end if
 
   pos_ip0 = pos(ip,:)         !old polymer
   pos_ip0i = pos(ip1,:)       !old ions
@@ -368,7 +373,7 @@ subroutine add_particle(EE,DeltaE)
           latt(xp,yi,zi)+latt(xp,yi,zp)+latt(xp,yp,zi)+latt(xp,yp,zp)
   if (total == 0) then
     call Delta_Energy_Ewald_add(DeltaE)
-    if ((DeltaE+U_prot)<0) then
+    if (Delta_Prob>=1) then
       latt(xi,yi,zi) = 1
       latt(xi,yi,zp) = 1
       latt(xi,yp,zi) = 1
@@ -384,7 +389,7 @@ subroutine add_particle(EE,DeltaE)
       accept = accept + 1
     else
       call random_number(rnd1)
-      if (rnd1<(exp(-(DeltaE+U_prot)*beta))) then
+      if (rnd1<Delta_Prob) then
         latt(xi,yi,zi) = 1
         latt(xi,yi,zp) = 1
         latt(xi,yp,zi) = 1
@@ -411,10 +416,15 @@ subroutine delete_particle(EE, DeltaE)
   implicit none
   real*8, intent(inout) :: EE
   real*8, intent(out) :: DeltaE
-  real*8 :: U_prot, rnd
+  real*8 :: U_prot, rnd, Delta_Prob
   integer :: xi, yi, zi, xp, yp, zp
 
   U_prot = log(10.D0)/beta*pH_pKa !+: add, -:delete
+  if ((Npe - Nq_net)/=0) then
+    Delta_Prob = Nq_net / ( Npe - Nq_net ) * exp(-(DeltaE+U_prot)*beta)
+  else
+    Delta_Prob = 1
+  end if
 
   pos_ip0 = pos(ip,:)             !polymer
   pos_ip1 = pos_ip0
@@ -430,7 +440,7 @@ subroutine delete_particle(EE, DeltaE)
   zp = ipz(zi)
 
   call Delta_Energy_Ewald_delete(DeltaE)
-  if ((DeltaE-U_prot)<0) then
+  if (Delta_Prob>=1) then
     latt(xi,yi,zi) = 0
     latt(xi,yi,zp) = 0
     latt(xi,yp,zi) = 0
@@ -446,7 +456,7 @@ subroutine delete_particle(EE, DeltaE)
     accept = accept + 1
   else
     call random_number(rnd)
-    if (rnd<(exp(-(DeltaE-U_prot)*beta))) then
+    if (rnd<Delta_Prob) then
       latt(xi,yi,zi) = 0
       latt(xi,yi,zp) = 0
       latt(xi,yp,zi) = 0
