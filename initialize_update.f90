@@ -342,11 +342,6 @@ subroutine add_particle(EE,DeltaE)
   integer :: xi,yi,zi,xp,yp,zp,total
 
   U_prot = log(10.D0)/beta*pH_pKa !+: add, -:delete
-  if (Nq_net/=0) then
-    Delta_Prob = ( Npe - Nq_net ) / Nq_net * exp(-(DeltaE-U_prot)*beta)
-  else
-    Delta_Prob = 1
-  end if
 
   pos_ip0 = pos(ip,:)         !old polymer
   pos_ip0i = pos(ip1,:)       !old ions
@@ -373,6 +368,11 @@ subroutine add_particle(EE,DeltaE)
           latt(xp,yi,zi)+latt(xp,yi,zp)+latt(xp,yp,zi)+latt(xp,yp,zp)
   if (total == 0) then
     call Delta_Energy_Ewald_add(DeltaE)
+    if (Nq_net/=0) then
+      Delta_Prob = 1. * ( Nq_PE - Nq_net ) / Nq_net * exp(-(DeltaE-U_prot)*beta)
+    else
+      Delta_Prob = 1
+    end if
     if (Delta_Prob>=1) then
       latt(xi,yi,zi) = 1
       latt(xi,yi,zp) = 1
@@ -420,11 +420,6 @@ subroutine delete_particle(EE, DeltaE)
   integer :: xi, yi, zi, xp, yp, zp
 
   U_prot = log(10.D0)/beta*pH_pKa !+: add, -:delete
-  if ((Npe - Nq_net)/=0) then
-    Delta_Prob = Nq_net / ( Npe - Nq_net ) * exp(-(DeltaE+U_prot)*beta)
-  else
-    Delta_Prob = 1
-  end if
 
   pos_ip0 = pos(ip,:)             !polymer
   pos_ip1 = pos_ip0
@@ -440,6 +435,11 @@ subroutine delete_particle(EE, DeltaE)
   zp = ipz(zi)
 
   call Delta_Energy_Ewald_delete(DeltaE)
+  if ((Nq_PE - Nq_net)/=0) then
+    Delta_Prob = 1.* Nq_net / ( Nq_PE - Nq_net ) * exp(-(DeltaE+U_prot)*beta)
+  else
+    Delta_Prob = 1
+  end if
   if (Delta_Prob>=1) then
     latt(xi,yi,zi) = 0
     latt(xi,yi,zp) = 0
